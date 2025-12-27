@@ -1,0 +1,15 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Temporary transcript files (these are outputs, not source)
+*.vtt
+*_clean.txt
+*_temp.txt
