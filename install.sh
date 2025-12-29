@@ -11,8 +11,10 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILLS_SRC="$SCRIPT_DIR/skills"
+AGENTS_SRC="$SCRIPT_DIR/agents"
 CLAUDE_DIR="$HOME/.claude"
 SKILLS_DST="$CLAUDE_DIR/skills"
+AGENTS_DST="$CLAUDE_DIR/agents"
 
 # Colors for output
 RED='\033[0;31m'
@@ -61,10 +63,39 @@ install_skills() {
     done
 
     echo ""
-    info "Installation complete!"
-    echo ""
     echo "Skills installed:"
     ls -la "$SKILLS_DST"
+}
+
+# Install agents
+install_agents() {
+    info "Installing agents to $AGENTS_DST"
+
+    mkdir -p "$AGENTS_DST"
+
+    for agent_file in "$AGENTS_SRC"/*.md; do
+        if [ -f "$agent_file" ]; then
+            agent_name=$(basename "$agent_file")
+            target="$AGENTS_DST/$agent_name"
+
+            # Remove existing symlink or file
+            if [ -L "$target" ]; then
+                rm "$target"
+                info "Removed existing symlink: $agent_name"
+            elif [ -f "$target" ]; then
+                warn "File exists at $target - skipping (remove manually if you want to replace)"
+                continue
+            fi
+
+            # Create symlink
+            ln -s "$agent_file" "$target"
+            info "Linked: $agent_name -> $target"
+        fi
+    done
+
+    echo ""
+    echo "Agents installed:"
+    ls -la "$AGENTS_DST"
 }
 
 # Remove skills
@@ -84,19 +115,38 @@ remove_skills() {
             fi
         fi
     done
+}
 
-    info "Removal complete!"
+# Remove agents
+remove_agents() {
+    info "Removing agents from $AGENTS_DST"
+
+    for agent_file in "$AGENTS_SRC"/*.md; do
+        if [ -f "$agent_file" ]; then
+            agent_name=$(basename "$agent_file")
+            target="$AGENTS_DST/$agent_name"
+
+            if [ -L "$target" ]; then
+                rm "$target"
+                info "Removed: $agent_name"
+            else
+                warn "Not a symlink or doesn't exist: $target"
+            fi
+        fi
+    done
 }
 
 # Main
 case "${1:-}" in
     --remove|-r)
         remove_skills
+        remove_agents
+        info "Removal complete!"
         ;;
     --help|-h)
         echo "Usage: $0 [--remove]"
         echo ""
-        echo "Install Claude Code skills by symlinking to ~/.claude/skills/"
+        echo "Install Claude Code skills and agents by symlinking to ~/.claude/"
         echo ""
         echo "Options:"
         echo "  --remove, -r    Remove installed symlinks"
@@ -105,5 +155,8 @@ case "${1:-}" in
     *)
         check_prerequisites
         install_skills
+        install_agents
+        echo ""
+        info "Installation complete!"
         ;;
 esac
